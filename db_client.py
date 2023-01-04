@@ -57,7 +57,7 @@ class DBClient:
 
         return user_id
 
-    def check_logged_in(self, user_id):
+    def is_logged_in(self, user_id):
         with sqlite3.connect('bot.db') as con:
             cur = con.cursor()
             cur.execute(self.CHECK_LOGGED_IN, (user_id, ))
@@ -65,12 +65,8 @@ class DBClient:
         return cur.fetchone()[0]
 
     def log_in(self, user_id, chat_id):
-        if self.check_logged_in(user_id):
-            return 'В ваш аккаунт уже был произведен вход'
-
-        with sqlite3.connect('bot.db') as con:
-            cur = con.cursor()
-            cur.execute(self.UPDATE_IS_LOGGED_IN, (user_id, ))
-            cur.execute(self.UPDATE_CHAT_ID, (chat_id, user_id))
-
-            return 'Вы успешно вошли в аккаунт'
+        if not self.is_logged_in(user_id):
+            with sqlite3.connect('bot.db') as con:
+                cur = con.cursor()
+                cur.execute(self.UPDATE_IS_LOGGED_IN, (user_id,))
+                cur.execute(self.UPDATE_CHAT_ID, (chat_id, user_id))
