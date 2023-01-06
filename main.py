@@ -201,9 +201,9 @@ async def process_first_gift(callback: CallbackQuery, state: FSMContext):
         data['first_gift'] = callback.data
     # Удаляем сообщение с кнопками, потому что следующий этап - загрузка фото
     # чтобы у пользователя не было желания тыкать кнопки
-    await callback.message.edit_text(text='Спасибо! Выбери вторую цифру')
 
     data = await state.get_data()
+
     numbers = data.values()
     btns = {}
     for i in range(1, 10):
@@ -211,7 +211,15 @@ async def process_first_gift(callback: CallbackQuery, state: FSMContext):
         if btn_name not in numbers:
             btns[btn_name] = str(i)
     keyboard = create_inline_kb(1, **btns)
-    await callback.message.edit_reply_markup(keyboard)
+
+    await callback.message.delete()
+
+    gift = data['first_gift'][-1]
+    await callback.message.answer(text=f'Ты выбрал подарок {gift}')
+    with open(f'media/gift1/{gift}.jpg', 'rb') as photo:
+        await callback.message.answer_photo(photo)
+    await asyncio.sleep(2)
+    await callback.message.answer(text='Выбери вторую цифру', reply_markup=keyboard)
 
     # Устанавливаем состояние ожидания загрузки фото
     await FSMChooseGifts.second_gift.set()
@@ -241,7 +249,15 @@ async def process_second_gift(callback: CallbackQuery, state: FSMContext):
         if btn_name not in numbers:
             btns[btn_name] = str(i)
     keyboard = create_inline_kb(1, **btns)
-    await callback.message.edit_reply_markup(keyboard)
+
+    await callback.message.delete()
+
+    gift = data['second_gift'][-1]
+    await callback.message.answer(text=f'Ты выбрал подарок {gift}')
+    with open(f'media/gift2/{gift}.jpg', 'rb') as photo:
+        await callback.message.answer_photo(photo)
+    await asyncio.sleep(2)
+    await callback.message.answer(text='Выбери последнюю цифру', reply_markup=keyboard)
 
     # Устанавливаем состояние ожидания загрузки фото
     await FSMChooseGifts.third_gift.set()
@@ -259,30 +275,38 @@ async def process_third_gift(callback: CallbackQuery, state: FSMContext):
     # кнопки) в хранилище, по ключу "gender"
     async with state.proxy() as data:
         data['third_gift'] = callback.data
-    # Удаляем сообщение с кнопками, потому что следующий этап - загрузка фото
-    # чтобы у пользователя не было желания тыкать кнопки
-    await callback.message.edit_text(text='Осталось выбрать последнюю цифру!')
+        gift = data['third_gift'][-1]
+
+    await callback.message.answer(text=f'Ты выбрал подарок {gift}')
+    with open(f'media/gift3/{gift}.jpg', 'rb') as photo:
+        await callback.message.answer_photo(photo)
+    await callback.message.delete()
+    await asyncio.sleep(2)
+
+    # await callback.message.edit_text(text='Осталось выбрать последнюю цифру!')
 
     await give_gifts(callback, state)
 
 
 async def give_gifts(callback: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
+    # data = await state.get_data()
     await state.finish()
 
-    numbers = [gift[-1] for gift in data.values()]
-    await callback.message.answer(f'Ты выбрал призы {", ".join(numbers)}')
+    # numbers = [gift[-1] for gift in data.values()]
+    # await callback.message.answer(f'Ты выбрал призы {", ".join(numbers)}')
+    #
+    # with open(f'media/gift1/{numbers[0]}.jpg', 'rb') as photo:
+    #     await callback.message.answer_photo(photo)
+    # with open(f'media/gift2/{numbers[1]}.jpg', 'rb') as photo:
+    #     await callback.message.answer_photo(photo)
+    # with open(f'media/gift3/{numbers[2]}.jpg', 'rb') as photo:
+    #     await callback.message.answer_photo(photo)
+    #
+    # await asyncio.sleep(3)
 
-    with open(f'media/gift1/{numbers[0]}.jpg', 'rb') as photo:
-        await callback.message.answer_photo(photo)
-    with open(f'media/gift2/{numbers[1]}.jpg', 'rb') as photo:
-        await callback.message.answer_photo(photo)
-    with open(f'media/gift3/{numbers[2]}.jpg', 'rb') as photo:
-        await callback.message.answer_photo(photo)
-
-    await asyncio.sleep(3)
     await callback.message.answer('Здесь будет само поздравление')
 
+    await asyncio.sleep(2)
     with open(f'media/other/second_video.MOV', 'rb') as video:
         await callback.message.answer_video(video)
 
@@ -302,13 +326,14 @@ async def send_cats(callback: CallbackQuery, number_of_cats: str):
     for cat in list_of_cats:
         with open(f'media/cats/{cat}', 'rb') as photo:
             await callback.message.answer_photo(photo)
+        await asyncio.sleep(1)
 
 
 async def process_number_button_press(callback: CallbackQuery):
     button_pressed = callback.data[0]
     await send_cats(callback, button_pressed)
-    await callback.answer(text='На этом все. С Днем рождения!',
-                          show_alert=True)
+    await asyncio.sleep(1)
+    await callback.message.answer(text='На этом все. С Днем рождения!')
     await callback.message.delete()
 
 
