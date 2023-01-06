@@ -1,5 +1,8 @@
-from consts import API_CATS_URL
+from consts import API_CATS_URL, POSSIBLE_BUTTONS, BUTTONS
 from db_client import DBClient
+from keyboards.yes_no_keyboard import question_keyboard, yes_keyboard
+from keyboards.dynamic_keyboard import create_inline_kb
+from keyboards.numbers_keyboard import keyboard_for_cats
 
 import os
 import asyncio
@@ -9,6 +12,7 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.types import CallbackQuery
 import dotenv
 
 
@@ -25,9 +29,6 @@ bot: Bot = Bot(token=API_TOKEN)
 dp: Dispatcher = Dispatcher(bot, storage=storage)
 db_client: DBClient = DBClient()
 
-# Создаем "базу данных" пользователей
-user_dict: dict[int, dict[str, str | int]] = {}
-
 
 # Cоздаем класс, наследуемый от StatesGroup, для группы состояний нашей FSM
 class FSMFillForm(StatesGroup):
@@ -36,6 +37,16 @@ class FSMFillForm(StatesGroup):
     # бот в разные моменты взаимодействия с пользователем
     fill_username = State()        # Состояние ожидания ввода логина
     fill_password = State()        # Состояние ожидания ввода пароля
+
+
+# Cоздаем класс, наследуемый от StatesGroup, для группы состояний нашей FSM
+class FSMChooseGifts(StatesGroup):
+    # Создаем экземпляры класса State, последовательно
+    # перечисляя возможные состояния, в которых будет находиться
+    # бот в разные моменты взаимодействия с пользователем
+    first_gift = State()        # Состояние ожидания ввода логина
+    second_gift = State()        # Состояние ожидания ввода пароля
+    third_gift = State()
 
 
 # Этот хэндлер будет срабатывать на команды "/start" и "/help" и отправлять базовую информацию в чат
@@ -73,8 +84,7 @@ async def process_login_command(message: types.Message):
 async def warning_not_username(message: types.Message):
     await message.answer(text='То, что ты отправил не похоже на логин\n'
                               'Пожалуйста, введи корректный логин\n\n'
-                              'Если хочешь прервать заполнение анкеты - отправь команду /cancel'
-                         )
+                              'Если хочешь прервать заполнение анкеты - отправь команду /cancel')
 
 
 # Этот хэндлер будет срабатывать, если введено корректный логин
@@ -95,8 +105,7 @@ async def process_username_sent(message: types.Message, state: FSMContext):
     else:
         await message.answer(text='Кажется, ты ввел неверный логин\n\n'
                                   'Пожалуйста, попробуй еще раз или напиши админу, что все сломалось🤯\n\n'
-                                  'Если хочешь прервать заполнение анкеты - отправь команду /cancel'
-                             )
+                                  'Если хочешь прервать заполнение анкеты - отправь команду /cancel')
 
 
 # Этот хэндлер будет срабатывать, если во время ввода пароля
@@ -104,8 +113,7 @@ async def process_username_sent(message: types.Message, state: FSMContext):
 async def warning_not_password(message: types.Message):
     await message.answer(text='То, что ты отправил не похоже на пароль\n'
                               'Пожалуйста, введи корректный пароль\n\n'
-                              'Если хочешь прервать заполнение анкеты - отправь команду /cancel'
-                         )
+                              'Если хочешь прервать заполнение анкеты - отправь команду /cancel')
 
 
 # Этот хэндлер будет срабатывать, если введено корректный пароль
@@ -152,7 +160,156 @@ async def send_congrats(message: types.Message, state: FSMContext):
         await message.answer_video(video)
     await asyncio.sleep(3)
 
-    await message.answer('some text')
+    await message.answer('Здесь будет текст про трудный год')
+    await asyncio.sleep(3)
+    await message.answer(text='И чтобы ты не скучал, предлагаю сыграть в небольшую игру. Ты согласен?',
+                         reply_markup=question_keyboard)
+
+
+# Этот хэндлер будет срабатывать на апдейт типа CallbackQuery
+# с data 'big_button_1_pressed'
+async def process_yes_button_press(callback: CallbackQuery):
+    await callback.message.edit_text('Выбери первую цифру"')
+    await callback.answer(text='В игре есть 9 номеров, под каждым находится (или не находится) приз.'
+                               'Ты можешь выбрать только 3 цифры и надеяться на удачу!',
+                          show_alert=True)
+    keyboard = create_inline_kb(1, **BUTTONS)
+    await callback.message.edit_reply_markup(keyboard)
+    await FSMChooseGifts.first_gift.set()
+
+
+# Этот хэндлер будет срабатывать на апдейт типа CallbackQuery
+# с data 'big_button_2_pressed'
+async def process_no_button_press(callback: CallbackQuery):
+    await callback.answer(text='Ответ неверный. Попробуй еще раз!', show_alert=True)
+    await callback.message.edit_reply_markup(yes_keyboard)
+
+
+# Этот хэндлер будет срабатывать, если во время выбора пола
+# будет введено/отправлено что-то некорректное
+async def warning_not_first_gift(message: types.Message):
+    await message.answer(text='Пожалуйста, пользуйтесь кнопками '
+                              'при выборе подарка')
+
+
+# Этот хэндлер будет срабатывать на нажатие кнопки при
+# выборе пола и переводить в состояние отправки фото
+async def process_first_gift(callback: CallbackQuery, state: FSMContext):
+    # C помощью менеджера контекста сохраняем пол (callback.data нажатой
+    # кнопки) в хранилище, по ключу "gender"
+    async with state.proxy() as data:
+        data['first_gift'] = callback.data
+    # Удаляем сообщение с кнопками, потому что следующий этап - загрузка фото
+    # чтобы у пользователя не было желания тыкать кнопки
+    await callback.message.edit_text(text='Спасибо! Выбери вторую цифру')
+
+    data = await state.get_data()
+    numbers = data.values()
+    btns = {}
+    for i in range(1, 10):
+        btn_name = 'btn_' + str(i)
+        if btn_name not in numbers:
+            btns[btn_name] = str(i)
+    keyboard = create_inline_kb(1, **btns)
+    await callback.message.edit_reply_markup(keyboard)
+
+    # Устанавливаем состояние ожидания загрузки фото
+    await FSMChooseGifts.second_gift.set()
+
+
+# Этот хэндлер будет срабатывать, если во время выбора пола
+# будет введено/отправлено что-то некорректное
+async def warning_not_second_gift(message: types.Message):
+    await message.answer(text='Пожалуйста, пользуйтесь кнопками '
+                              'при выборе подарка')
+
+
+async def process_second_gift(callback: CallbackQuery, state: FSMContext):
+    # C помощью менеджера контекста сохраняем пол (callback.data нажатой
+    # кнопки) в хранилище, по ключу "gender"
+    async with state.proxy() as data:
+        data['second_gift'] = callback.data
+    # Удаляем сообщение с кнопками, потому что следующий этап - загрузка фото
+    # чтобы у пользователя не было желания тыкать кнопки
+    await callback.message.edit_text(text='Осталось выбрать последнюю цифру!')
+
+    data = await state.get_data()
+    numbers = data.values()
+    btns = {}
+    for i in range(1, 10):
+        btn_name = 'btn_' + str(i)
+        if btn_name not in numbers:
+            btns[btn_name] = str(i)
+    keyboard = create_inline_kb(1, **btns)
+    await callback.message.edit_reply_markup(keyboard)
+
+    # Устанавливаем состояние ожидания загрузки фото
+    await FSMChooseGifts.third_gift.set()
+
+
+# Этот хэндлер будет срабатывать, если во время выбора пола
+# будет введено/отправлено что-то некорректное
+async def warning_not_third_gift(message: types.Message):
+    await message.answer(text='Пожалуйста, пользуйтесь кнопками '
+                              'при выборе подарка')
+
+
+async def process_third_gift(callback: CallbackQuery, state: FSMContext):
+    # C помощью менеджера контекста сохраняем пол (callback.data нажатой
+    # кнопки) в хранилище, по ключу "gender"
+    async with state.proxy() as data:
+        data['third_gift'] = callback.data
+    # Удаляем сообщение с кнопками, потому что следующий этап - загрузка фото
+    # чтобы у пользователя не было желания тыкать кнопки
+    await callback.message.edit_text(text='Осталось выбрать последнюю цифру!')
+
+    await give_gifts(callback, state)
+
+
+async def give_gifts(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    await state.finish()
+
+    numbers = [gift[-1] for gift in data.values()]
+    await callback.message.answer(f'Ты выбрал призы {", ".join(numbers)}')
+
+    with open(f'media/gift1/{numbers[0]}.jpg', 'rb') as photo:
+        await callback.message.answer_photo(photo)
+    with open(f'media/gift2/{numbers[1]}.jpg', 'rb') as photo:
+        await callback.message.answer_photo(photo)
+    with open(f'media/gift3/{numbers[2]}.jpg', 'rb') as photo:
+        await callback.message.answer_photo(photo)
+
+    await asyncio.sleep(3)
+    await callback.message.answer('Здесь будет само поздравление')
+
+    with open(f'media/other/second_video.MOV', 'rb') as video:
+        await callback.message.answer_video(video)
+
+    await asyncio.sleep(3)
+    await callback.message.answer(text='Здесь будет текст: сколько котиков хочешь?', reply_markup=keyboard_for_cats)
+
+
+async def send_cats(callback: CallbackQuery, number_of_cats: str):
+    cats_dict = {
+        '1': ['3.jpg'],
+        '2': ['4.jpg', '3.jpg'],
+        '3': ['4.jpg', '3.jpg', '2.jpg'],
+        '4': ['4.jpg', '1.jpg', '3.jpg', '2.jpg'],
+    }
+
+    list_of_cats = cats_dict[number_of_cats]
+    for cat in list_of_cats:
+        with open(f'media/cats/{cat}', 'rb') as photo:
+            await callback.message.answer_photo(photo)
+
+
+async def process_number_button_press(callback: CallbackQuery):
+    button_pressed = callback.data[0]
+    await send_cats(callback, button_pressed)
+    await callback.answer(text='На этом все. С Днем рождения!',
+                          show_alert=True)
+    await callback.message.delete()
 
 
 # Регистрируем хэндлеры
@@ -161,6 +318,16 @@ dp.register_message_handler(process_username_sent, content_types='text', state=F
 dp.register_message_handler(warning_not_username, content_types='any', state=FSMFillForm.fill_username)
 dp.register_message_handler(process_password_sent, content_types='text', state=FSMFillForm.fill_password)
 dp.register_message_handler(warning_not_password, content_types='any', state=FSMFillForm.fill_password)
+dp.register_callback_query_handler(process_yes_button_press, text='yes_button_pressed')
+dp.register_callback_query_handler(process_no_button_press, text='no_button_pressed')
+dp.register_callback_query_handler(process_first_gift, state=FSMChooseGifts.first_gift, text=POSSIBLE_BUTTONS)
+dp.register_callback_query_handler(process_second_gift, state=FSMChooseGifts.second_gift, text=POSSIBLE_BUTTONS)
+dp.register_callback_query_handler(process_third_gift, state=FSMChooseGifts.third_gift, text=POSSIBLE_BUTTONS)
+dp.register_message_handler(warning_not_first_gift, state=FSMChooseGifts.first_gift, content_types='any')
+dp.register_message_handler(warning_not_second_gift, state=FSMChooseGifts.second_gift, content_types='any')
+dp.register_message_handler(warning_not_third_gift, state=FSMChooseGifts.third_gift, content_types='any')
+dp.register_callback_query_handler(process_number_button_press, text=['1_button_pressed', '2_button_pressed',
+                                                                      '3_button_pressed', '4_button_pressed'])
 
 
 # Запускаем поллинг
