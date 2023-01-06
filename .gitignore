@@ -136,3 +136,5 @@ bot.db
 
 # Pictures and videos
 media
+
+lexicon.py
