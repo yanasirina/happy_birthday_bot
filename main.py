@@ -4,6 +4,7 @@ from keyboards.yes_no_keyboard import question_keyboard, yes_keyboard
 from keyboards.dynamic_keyboard import create_inline_kb
 from keyboards.numbers_keyboard import keyboard_for_cats
 from lexicon.lexicon import LEXICON_RU
+from loggers.tg_logger import TgLogger
 
 import os
 import asyncio
@@ -20,12 +21,14 @@ import dotenv
 dotenv.load_dotenv()
 
 API_TOKEN: str = os.getenv('BOT_TOKEN')
+ADMIN_ID: str = os.getenv('ADMIN_ID')
 
 storage: MemoryStorage = MemoryStorage()
 
 bot: Bot = Bot(token=API_TOKEN)
 dp: Dispatcher = Dispatcher(bot, storage=storage)
 db_client: DBClient = DBClient()
+logger: TgLogger = TgLogger(bot=bot, admin_id=ADMIN_ID)
 
 
 class FSMFillForm(StatesGroup):
@@ -42,6 +45,14 @@ class FSMChooseGifts(StatesGroup):
 @dp.message_handler(commands=['start', 'help'])
 async def process_start_help_commands(message: types.Message):
     await message.answer(text=LEXICON_RU['start_help'])
+    if message.text == '/start':
+        name = message.from_user.full_name
+        username = message.from_user.username
+        user_id = message.from_user.id
+        await logger.log_to_tg(f'Новый пользователь присоединился к боту\n'
+                               f'ID: {user_id}\n'
+                               f'Имя: {name}\n'
+                               f'Юзернейм: {username}\n')
 
 
 @dp.message_handler(commands=['cat'])
@@ -111,6 +122,15 @@ async def process_cancel_command(message: types.Message, state: FSMContext):
 
 async def send_congrats(message: types.Message, state: FSMContext):
     await state.finish()
+
+    name = message.from_user.full_name
+    username = message.from_user.username
+    user_id = message.from_user.id
+    await logger.log_to_tg(f'Новый пользователь авторизовался\n'
+                           f'ID: {user_id}\n'
+                           f'Имя: {name}\n'
+                           f'Юзернейм: {username}\n')
+
     with open('media/other/first_video.MOV', 'rb') as video:
         await message.answer_video(video)
     await asyncio.sleep(3)
@@ -206,7 +226,15 @@ async def give_gifts(callback: CallbackQuery, state: FSMContext):
     await state.finish()
     await callback.message.answer(text=LEXICON_RU['congratulations'])
 
-    await asyncio.sleep(2)
+    name = callback.from_user.full_name
+    username = callback.from_user.username
+    user_id = callback.from_user.id
+    await logger.log_to_tg(f'Новый пользователь получил поздравление\n'
+                           f'ID: {user_id}\n'
+                           f'Имя: {name}\n'
+                           f'Юзернейм: {username}\n')
+
+    await asyncio.sleep(1)
     with open(f'media/other/second_video.MOV', 'rb') as video:
         await callback.message.answer_video(video)
 
