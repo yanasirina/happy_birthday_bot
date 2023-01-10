@@ -11,3 +11,8 @@ BUTTONS: dict[str, str] = {'btn_1': '1',
                            'btn_7': '7',
                            'btn_8': '8',
                            'btn_9': '9'}
+
+SPREADSHEETS = 'https://spreadsheets.google.com/feeds'
+SPREADSHEETS_API = 'https://www.googleapis.com/auth/spreadsheets'
+DRIVE_API = 'https://www.googleapis.com/auth/drive'
+DRIVE_FILE = 'https://www.googleapis.com/auth/drive.file'

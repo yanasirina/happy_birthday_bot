@@ -128,13 +128,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# For Pycharm users
 .idea
 
-# Database
 bot.db
-
-# Pictures and videos
 media
-
 lexicon.py
+creds.json

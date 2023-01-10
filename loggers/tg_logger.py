@@ -6,5 +6,5 @@ class TgLogger:
         self.bot = bot
         self.admin_id = admin_id
 
-    async def log_to_tg(self, text: str):
+    async def log(self, text: str):
         await self.bot.send_message(chat_id=self.admin_id, text=text)
