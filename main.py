@@ -303,4 +303,5 @@ if __name__ == '__main__':
             executor.start_polling(dp, skip_updates=True)
         except Exception as error:
             txt = f"{error.__class__}\n{error}\n\n{datetime.datetime.now()}"
-            logger.tg.log_error(text=txt)
+            url = f"https://api.telegram.org/bot{API_TOKEN}/sendMessage"
+            requests.post(url, params={"text": txt, "chat_id": ADMIN_ID})
