@@ -298,4 +298,9 @@ dp.register_callback_query_handler(process_number_button_press, text=['1_button_
                                                                       '3_button_pressed', '4_button_pressed'])
 
 if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+    while True:
+        try:
+            executor.start_polling(dp, skip_updates=True)
+        except Exception as error:
+            txt = f"{error.__class__}\n{error}\n\n{datetime.datetime.now()}"
+            logger.tg.log_error(text=txt)

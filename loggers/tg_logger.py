@@ -8,3 +8,6 @@ class TgLogger:
 
     async def log(self, text: str):
         await self.bot.send_message(chat_id=self.admin_id, text=text)
+
+    def log_error(self, text: str):
+        self.bot.send_message(chat_id=self.admin_id, text=text)
