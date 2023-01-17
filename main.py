@@ -146,10 +146,14 @@ async def send_congrats(message: types.Message, state: FSMContext):
 
     with open('media/other/first_video.MOV', 'rb') as video:
         await message.answer_video(video)
-    await asyncio.sleep(3)
+    await asyncio.sleep(8)
 
     await message.answer(text=LEXICON_RU['hard_year'], parse_mode='MarkdownV2')
-    await asyncio.sleep(3)
+    await asyncio.sleep(5)
+    with open('media/other/certificate.jpg', 'rb') as photo:
+        await message.answer_photo(photo)
+
+    await asyncio.sleep(1)
     await message.answer(text=LEXICON_RU['start_game'],
                          reply_markup=question_keyboard)
 
