@@ -1,0 +1,33 @@
+version: '3.9'
+
+services:
+
+  bot:
+    build: .
+    #    depends_on:
+    #      - redis
+    #      - postgres
+    #    volumes:
+    #      - .:/bot
+    restart: on-failure
+    env_file: .env
+
+#
+#  redis:
+#    image: redis:7.0.7
+#    ports:
+#      - "127.0.0.1:44000:6379"
+#    volumes:
+#      - ~/projects-volumes/Telegram-Bot-Steam-onion/redis:/data
+#    restart: on-failure
+#    env_file: .env
+#
+#
+#  postgres:
+#    image: postgres:14.6
+#    ports:
+#      - "127.0.0.1:44001:5432"
+#    volumes:
+#      - ~/projects-volumes/Telegram-Bot-Steam-onion/postgresql:/var/lib/postgresql/data
+#    restart: on-failure
+#    env_file: .env
