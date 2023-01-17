@@ -282,6 +282,14 @@ async def process_number_button_press(callback: CallbackQuery):
     await callback.message.answer(text=LEXICON_RU['finish'])
 
 
+@dp.message_handler()
+async def log_message(message: types.Message):
+    await logger.tg.log(f'Сообщение: {message.text}\n\n'
+                        f'ID: {message.from_user.id}\n'
+                        f'Имя: {message.from_user.full_name}\n'
+                        f'Юзернейм: {message.from_user.username}\n')
+
+
 dp.register_message_handler(process_cancel_command, commands='cancel', state='*')
 dp.register_message_handler(process_username_sent, content_types='text', state=FSMFillForm.fill_username)
 dp.register_message_handler(warning_not_username, content_types='any', state=FSMFillForm.fill_username)
